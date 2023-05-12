@@ -7,7 +7,7 @@ This is a command line utility
 
   -t, --tospf      Converts the input to an SPF image
 
-  -f, --fromspf    Converts the input SPF image to a rgb565 image
+  -f, --fromspf    Converts the input SPF image to whatever format is specified by the output (and is supported by Magick.NET)
 
   -i, --input      Required. The input path. To convert multiple input files to a multi-frame SPF, specify a directory containing multiple input files
 
