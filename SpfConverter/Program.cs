@@ -4,6 +4,7 @@ using CommandLine;
 using ImageMagick;
 using SpfConverter;
 using SpfConverter.Spf;
+using SpfConverter.Utility;
 
 Parser.Default.ParseArguments<Options>(args)
       .WithParsed(
@@ -17,10 +18,12 @@ Parser.Default.ParseArguments<Options>(args)
               }
               
               var inputPaths = new List<string>();
-              
-              if(Directory.Exists(o.Input))
-                  inputPaths.AddRange(Directory.GetFiles(o.Input));
-              else if(File.Exists(o.Input))
+
+              if (Directory.Exists(o.Input))
+              {
+                  var files = Directory.GetFiles(o.Input).OrderBy(x => x, new WindowsStringComparer());
+                  inputPaths.AddRange(files);
+              } else if(File.Exists(o.Input))
                   inputPaths.Add(o.Input);
               else
               {

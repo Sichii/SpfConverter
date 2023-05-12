@@ -6,18 +6,19 @@ namespace SpfConverter.Spf;
 
 public sealed class SpfPalette
 {
-    public ICollection<IMagickColor<ushort>> Colors { get; init; }
+    public ICollection<IMagickColor<ushort>> Colors565 { get; init; }
+    public ICollection<IMagickColor<ushort>> Colors1555 { get; init; }
     public int Padding { get; init; }
     private const ushort FIVE_BIT_MASK = 0b11111;
     private const ushort SIX_BIT_MASK = 0b111111;
 
-    public SpfPalette(ICollection<IMagickColor<ushort>> colors)
+    public SpfPalette(ICollection<IMagickColor<ushort>> colors565)
     {
-        if (colors.Count > 256)
+        if (colors565.Count > 256)
             throw new ArgumentException("Palette can only contain 256 colors");
         
-        Colors = colors;
-        Padding = 256 - colors.Count;
+        Colors565 = colors565;
+        Padding = 256 - colors565.Count;
     }
     
     public void Write(ref SpanWriter writer)
@@ -29,10 +30,12 @@ public sealed class SpfPalette
     public static SpfPalette Read(ref SpanReader reader)
     {
         var rgb565 = Read565(ref reader);
-        // ReSharper disable once UnusedVariable
         var rgb1555 = Read1555(ref reader);
 
-        return new SpfPalette(rgb565);
+        return new SpfPalette(rgb565)
+        {
+            Colors1555 = rgb1555
+        };
     }
 
     private static ICollection<IMagickColor<ushort>> Read565(ref SpanReader reader)
@@ -79,7 +82,7 @@ public sealed class SpfPalette
     
     private void Write565(ref SpanWriter writer)
     {
-        foreach (var color in Colors)
+        foreach (var color in Colors565)
         {
             //@formatter:off
             var r = MathEx.ScaleRange(color.R, 0, ushort.MaxValue, 0, 0b11111);
@@ -96,7 +99,7 @@ public sealed class SpfPalette
     
     private void Write1555(ref SpanWriter writer)
     {
-        foreach (var color in Colors)
+        foreach (var color in Colors565)
         {
             //@formatter:off
             var r = MathEx.ScaleRange<ushort, byte>(color.R, 0, ushort.MaxValue, 0, 0b11111);

@@ -63,8 +63,9 @@ public sealed class SpfFrame
         {
             var pixelIndex = set.Index;
             var paletteIndex = Data[pixelIndex];
-            var color = palette.Colors.ElementAt(paletteIndex);
-            set.Pixel.SetValues(new[] { color.R, color.G, color.B, ushort.MaxValue });
+            var color = palette.Colors565.ElementAt(paletteIndex);
+            var a = palette.Colors1555.ElementAt(paletteIndex).A;
+            set.Pixel.SetValues(new[] { color.R, color.G, color.B, a });
         }
 
         return image;
