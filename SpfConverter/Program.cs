@@ -21,7 +21,7 @@ Parser.Default.ParseArguments<Options>(args)
 
               if (Directory.Exists(o.Input))
               {
-                  var files = Directory.GetFiles(o.Input).OrderBy(x => x, new WindowsStringComparer());
+                  var files = Directory.GetFiles(o.Input).OrderBy(x => x, WindowsStringComparer.Instance);
                   inputPaths.AddRange(files);
               } else if(File.Exists(o.Input))
                   inputPaths.Add(o.Input);

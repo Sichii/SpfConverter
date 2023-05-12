@@ -2,6 +2,9 @@
 
 namespace SpfConverter.Spf;
 
+/// <summary>
+/// Represents the header of a single frame in an SPF image
+/// </summary>
 public sealed class SpfFrameHeader
 {
     public ushort PadWidth { get; init; }
@@ -15,6 +18,9 @@ public sealed class SpfFrameHeader
     public uint ByteCount { get; init; }
     public uint SemiByteCount { get; init; }
 
+    /// <summary>
+    /// Writes the frame header to a buffer
+    /// </summary>
     public void Write(ref SpanWriter writer)
     {
         writer.WriteUInt16(PadWidth);
@@ -29,6 +35,9 @@ public sealed class SpfFrameHeader
         writer.WriteUInt32(SemiByteCount);
     }
 
+    /// <summary>
+    /// Reads a frame header from the buffer
+    /// </summary>
     public static SpfFrameHeader Read(ref SpanReader reader)
     {
         var padWidth = reader.ReadUInt16();

@@ -4,14 +4,31 @@ using SpfConverter.Utility;
 
 namespace SpfConverter.Spf;
 
+/// <summary>
+///     Represents the color palette of an SPF image
+/// </summary>
 public sealed class SpfPalette
 {
+    /// <summary>
+    /// The first set of colors in the palette, which are in RGB565 format
+    /// </summary>
     public ICollection<IMagickColor<ushort>> Colors565 { get; init; }
+    /// <summary>
+    /// The second set of colors in the palette, which are in RGB1555 format
+    /// </summary>
     public ICollection<IMagickColor<ushort>> Colors1555 { get; init; }
+    /// <summary>
+    /// The amount of padding in the palette (unused colors)
+    /// </summary>
     public int Padding { get; init; }
     private const ushort FIVE_BIT_MASK = 0b11111;
     private const ushort SIX_BIT_MASK = 0b111111;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SpfPalette"/> class
+    /// </summary>
+    /// <param name="colors565">Up to 256 colors</param>
+    /// <exception cref="ArgumentException">Palette can only contain 256 colors</exception>
     public SpfPalette(ICollection<IMagickColor<ushort>> colors565)
     {
         if (colors565.Count > 256)
@@ -19,17 +36,34 @@ public sealed class SpfPalette
         
         Colors565 = colors565;
         Padding = 256 - colors565.Count;
+
+        //@formatter:off
+        Colors1555 = Enumerable.Range(0, Colors565.Count)
+                               .Select(_ => new MagickColor(0, 0, 0, 0))
+                               .OfType<IMagickColor<ushort>>()
+                               .ToList();
+        //@formatter:on
     }
     
+    /// <summary>
+    /// Writes the palette to a buffer
+    /// </summary>
     public void Write(ref SpanWriter writer)
     {
+        //write the 565 bytes first
         Write565(ref writer);
+        //then the 1555 bytes
         Write1555(ref writer);
     }
 
+    /// <summary>
+    /// Reads a palette from a buffer
+    /// </summary>
     public static SpfPalette Read(ref SpanReader reader)
     {
+        //read the 565 bytes first
         var rgb565 = Read565(ref reader);
+        //then the 1555 bytes
         var rgb1555 = Read1555(ref reader);
 
         return new SpfPalette(rgb565)
@@ -42,10 +76,14 @@ public sealed class SpfPalette
     {
         var colors = new List<IMagickColor<ushort>>();
 
+        //read 256 colors
         for (var i = 0; i < 256; i++)
         {
+            //the colors are encded in 16bits (rgb565)
             var color = reader.ReadUInt16();
             //@formatter:off
+            //shift and mask to get colors as bytes
+            //then normalize colors to true color (16bit)
             var r = MathEx.ScaleRange<int, ushort>(color >> 11, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
             var g = MathEx.ScaleRange<int, ushort>((color >> 5) & SIX_BIT_MASK, 0, SIX_BIT_MASK, 0, ushort.MaxValue);
             var b = MathEx.ScaleRange<int, ushort>(color & FIVE_BIT_MASK, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
@@ -62,12 +100,15 @@ public sealed class SpfPalette
     {
         var colors = new List<IMagickColor<ushort>>();
         
-
+        //read 256 colors
         for (var i = 0; i < 256; i++)
         {
+            //the colors are encded in 16bits (rgba1555)
             var color = reader.ReadUInt16();
             //@formatter:off
             //TODO: do i bother reading the alpha? not sure what use it would be
+             //shift and mask to get colors as bytes
+            //then normalize colors to true color (16bit)
             var r = MathEx.ScaleRange<int, ushort>((color >> 10) & FIVE_BIT_MASK, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
             var g = MathEx.ScaleRange<int, ushort>((color >> 5) & FIVE_BIT_MASK, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
             var b = MathEx.ScaleRange<int, ushort>(color & FIVE_BIT_MASK, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
@@ -110,8 +151,8 @@ public sealed class SpfPalette
             var rgb1555 = (ushort) ((r << 10) | (g << 5) | b);
             
             //if there is alpha, set alpha bit i guess?
-            if(color.A < ushort.MaxValue)
-                rgb1555 |= 0x8000;
+            //if(color.A < ushort.MaxValue)
+            //  rgb1555 |= 0x8000;
             
             writer.WriteUInt16(rgb1555);
         }

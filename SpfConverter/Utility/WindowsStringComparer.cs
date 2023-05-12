@@ -2,8 +2,10 @@
 
 namespace SpfConverter.Utility;
 
-public class WindowsStringComparer : IComparer<string>
+public sealed class WindowsStringComparer : IComparer<string>
 {
+    public static WindowsStringComparer Instance { get; } = new();
+    
     internal static class SafeNativeMethods
     {
         [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]

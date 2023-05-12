@@ -195,6 +195,10 @@ public ref struct SpanWriter
         Position += buffer.Length;
     }
     
+    /// <summary>
+    ///     Writes a span of bytes to the buffer.
+    /// </summary>
+    /// <param name="buffer">The span to copy from</param>
     public void WriteBytes(ref Span<byte> buffer)
     {
         GrowIfNeeded(buffer.Length);
