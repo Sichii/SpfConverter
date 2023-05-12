@@ -14,8 +14,8 @@ public sealed class SpfFrame
         {
             PixelWidth = (ushort)image.Width,
             PixelHeight = (ushort)image.Height,
-            ByteWidth = (uint)image.Width, //should this not be x2?
-            ByteCount = (uint)(image.Width * image.Height * 2),
+            ByteWidth = (uint)image.Width,
+            ByteCount = (uint)(image.Width * image.Height),
         };
         
         var pixels = image.GetPixels().ToList();
@@ -39,18 +39,11 @@ public sealed class SpfFrame
         };
     }
 
-    public void Write(ref SpanWriter writer)
-    {
-        Header.Write(ref writer);
-        writer.WriteUInt32((uint)Data.Length);
-        writer.WriteBytes(Data);
-    }
+    public void Write(ref SpanWriter writer) => writer.WriteBytes(Data);
 
-    public static SpfFrame Read(ref SpanReader reader)
+    public static SpfFrame Read(SpfFrameHeader header, ref SpanReader reader)
     {
-        var header = SpfFrameHeader.Read(ref reader);
-        var dataLength = reader.ReadUInt32();
-        var data = reader.ReadBytes((int)dataLength);
+        var data = reader.ReadBytes((int)header.ByteCount);
         
         return new SpfFrame
         {

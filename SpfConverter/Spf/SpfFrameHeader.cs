@@ -8,9 +8,9 @@ public sealed class SpfFrameHeader
     public ushort PadHeight { get; init; }
     public ushort PixelWidth { get; init; }
     public ushort PixelHeight { get; init; }
-    public uint Unknown => 3435973836; // Every SPF has this value associated with it
+    public uint Unknown => 0xCCCCCCCC; // Every SPF has this value associated with it
     public uint Reserved { get; init; }
-    public uint StartAddress { get; init; }
+    public uint StartAddress { get; set; }
     public uint ByteWidth { get; init; }
     public uint ByteCount { get; init; }
     public uint SemiByteCount { get; init; }

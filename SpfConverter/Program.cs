@@ -46,5 +46,5 @@ Parser.Default.ParseArguments<Options>(args)
               }
           });
           
-          
+Console.WriteLine("Press any key to exit");
 Console.ReadLine();
