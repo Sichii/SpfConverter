@@ -37,12 +37,13 @@ public sealed class SpfFrame
         //get all pixels in the image
         var pixels = image.GetPixels().ToList();
         var frameData = new byte[pixels.Count];
+        var frameDataChannel = pixels.First().Channels - 1;
 
         //the palette indexes are stored in the alpha channel of each pixel for some reason
         for (var i = 0; i < pixels.Count; i++)
         {
             var pixel = pixels[i];
-            var index = pixel.GetChannel(3);
+            var index = pixel.GetChannel(frameDataChannel);
 
             if (index > 256)
                 throw new IndexOutOfRangeException("Pixel points to an color outside the bounds of the palette");
