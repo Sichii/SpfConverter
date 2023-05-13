@@ -132,10 +132,6 @@ public sealed class SpfImage
 
     private static void ApplyTransparencyMap(IMagickImage<ushort> image, ICollection<(int X, int Y)> transparencyMap)
     {
-        //if there were no transparent pixels in the image, return
-        if (!transparencyMap.Any())
-            return;
-        
         //get the current colors in the palette, we will need this later
         var beforePalette = GetPalette(image)!;
         
