@@ -37,7 +37,7 @@ public sealed class SpfImage
     /// <summary>
     ///     Creates a new <see cref="SpfImage"/> from a <see cref="MagickImageCollection"/>
     /// </summary>
-    public static SpfImage FromMagickImageCollection(MagickImageCollection collection)
+    public static SpfImage FromMagickImageCollection(MagickImageCollection collection, DitherMethod ditherMethod)
     {
         var frames = new List<SpfFrame>();
         var header = new SpfHeader
@@ -51,7 +51,7 @@ public sealed class SpfImage
             {
                 Colors = 256,
                 ColorSpace = ColorSpace.sRGB,
-                DitherMethod = DitherMethod.No,
+                DitherMethod = ditherMethod,
             });
         
         //create a mosaic of all images in the collection

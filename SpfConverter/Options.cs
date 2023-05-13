@@ -1,4 +1,5 @@
 ﻿using CommandLine;
+using ImageMagick;
 
 namespace SpfConverter;
 
@@ -32,4 +33,20 @@ public class Options
         Required = true,
         HelpText = "The output path. To convert a multi-frame SPF to multiple images, specify a directory")]
     public string Output { get; set; } = null!;
+
+    [Option(
+        'd',
+        "dither",
+        Required = false,
+        Default = "None",
+        HelpText = "The dithering algorithm to use when converting to SPF. Valid values are: None, FloydSteinberg, Riemersma")]
+    public string Dithering { get; set; } = null!;
+
+    public DitherMethod DitherMethod => Dithering.ToLower() switch
+    {
+        "none"           => DitherMethod.No,
+        "floydsteinberg" => DitherMethod.FloydSteinberg,
+        "riemersma"      => DitherMethod.Riemersma,
+        _                => DitherMethod.No
+    };
 }

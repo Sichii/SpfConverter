@@ -39,7 +39,7 @@ Parser.Default.ParseArguments<Options>(args)
                   foreach (var path in inputPaths)
                       imageCollection.Add(path);
 
-                  var spfImage = SpfImage.FromMagickImageCollection(imageCollection);
+                  var spfImage = SpfImage.FromMagickImageCollection(imageCollection, o.DitherMethod);
                   spfImage.WriteSpf(o.Output);
               }
               else if (o.FromSpf)
