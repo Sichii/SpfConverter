@@ -44,29 +44,35 @@ public sealed class SpfImage
         {
             Unknown2 = 1
         };
+
+        
+        var alphaMaps = collection
+                        .Select(GetTransparencyMap)
+                        .ToList();
         
         //reduce colors to 256, no dithering
         collection.Quantize(
             new QuantizeSettings
             {
-                Colors = 256,
+                Colors = 255,
                 ColorSpace = ColorSpace.sRGB,
                 DitherMethod = ditherMethod,
             });
-        
+
+        foreach ((var image, var alphaMap) in collection.Zip(alphaMaps))
+            ApplyTransparencyMap(image, alphaMap);
+
         //create a mosaic of all images in the collection
         using var mosaic = collection.Mosaic();
         
         //get colors of the mosaic
-        var palette = Enumerable.Range(0, mosaic.TotalColors)
-                                .Select(i => mosaic.GetColormapColor(i))
-                                .ToList();
+        var palette = GetPalette(mosaic);
 
         //map each image to the palette
         foreach (var image in collection)
         {
-            //map the colors of each image to the palette
-            image.Map(palette!);
+            //i guess this messes stuff up for some reason
+            //image.Map(palette!);
             frames.Add(SpfFrame.FromMagickImage((MagickImage)image));
         }
 
@@ -74,6 +80,97 @@ public sealed class SpfImage
         var spfPalette = new SpfPalette(palette!);
 
         return new SpfImage(header, spfPalette, frames);
+    }
+
+    private static List<IMagickColor<ushort>>? GetPalette(IMagickImage<ushort> image)
+    {
+        //if the image doesnt use a palette, return null
+        if (image.ColormapSize <= 0)
+            return null;
+        
+        return Enumerable.Range(0, image.ColormapSize)
+                         .Select(i => image.GetColormapColor(i)!)
+                         .ToList();
+    }
+
+    /// <summary>
+    ///     The idea is to get every pixel that is either transparent, or points to a transparent color in the palette
+    /// </summary>
+    private static ICollection<(int X, int Y)> GetTransparencyMap(IMagickImage<ushort> image)
+    {
+        var palette = GetPalette(image);
+        var pixels = image.GetPixels();
+        var width = image.Width;
+        var height = image.Height;
+        var map = new List<(int X, int Y)>();
+        var indexChannel = pixels.GetIndex(PixelChannel.Index);
+        var alphaChannel = pixels.GetIndex(PixelChannel.Alpha);
+
+        //for each pixel in the image
+        for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                //get the pixel at that point
+                var pixel = pixels.GetPixel(x, y);
+
+                //if this image uses a palette
+                if ((palette != null) && (indexChannel != -1))
+                {
+                    //grab the frame data, find the color in the palette, and check if it's transparent
+                    var frameData = (byte)pixel.GetChannel(indexChannel);
+                    var paletteColor = palette[frameData];
+                    
+                    if(paletteColor.A == 0)
+                        map.Add((x, y));
+                } else if ((alphaChannel != -1) && (pixel.GetChannel(alphaChannel) == 0))
+                    //if this image doesn't use a palette, check if the pixel is transparent
+                    map.Add((x, y));
+            }
+
+        return map;
+    }
+
+    private static void ApplyTransparencyMap(IMagickImage<ushort> image, ICollection<(int X, int Y)> transparencyMap)
+    {
+        //if there were no transparent pixels in the image, return
+        if (!transparencyMap.Any())
+            return;
+        
+        //get the current colors in the palette, we will need this later
+        var beforePalette = GetPalette(image)!;
+        
+        //increase the color map size by 1
+        //for some reason this causes the entire color map to go greyscale
+        image.ColormapSize += 1;
+        var transparentIndex = (ushort)(image.ColormapSize - 1);
+
+        //set the last color in the color map to transparent
+        image.SetColormapColor(
+            transparentIndex,
+            new MagickColor(
+                0,
+                0,
+                0,
+                0));
+
+        //replace all the other colors that were previously in the color map
+        for (var i = 0; i < beforePalette.Count; i++)
+        {
+            var color = beforePalette[i];
+
+            image.SetColormapColor(i, color);
+        }
+        
+        var pixels = image.GetPixels();
+        var indexChannel = pixels.GetIndex(PixelChannel.Index);
+        
+        //for each point in the transparency map
+        foreach (var point in transparencyMap)
+        {
+            //grab that pixel and set it's index to the trasparent color
+            var pixel = pixels.GetPixel(point.X, point.Y);
+            pixel.SetChannel(indexChannel, transparentIndex);
+        }
     }
     
     /// <summary>

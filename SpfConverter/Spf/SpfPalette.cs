@@ -81,14 +81,28 @@ public sealed class SpfPalette
         {
             //the colors are encded in 16bits (rgb565)
             var color = reader.ReadUInt16();
-            //@formatter:off
+
+            //true black maps to transparent
+            if (color == 0)
+            {
+                colors.Add(
+                    new MagickColor(
+                        0,
+                        0,
+                        0,
+                        0));
+
+                continue;
+            }
+            
             //shift and mask to get colors as bytes
             //then normalize colors to true color (16bit)
+            //@formatter:off
             var r = MathEx.ScaleRange<int, ushort>(color >> 11, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
             var g = MathEx.ScaleRange<int, ushort>((color >> 5) & SIX_BIT_MASK, 0, SIX_BIT_MASK, 0, ushort.MaxValue);
             var b = MathEx.ScaleRange<int, ushort>(color & FIVE_BIT_MASK, 0, FIVE_BIT_MASK, 0, ushort.MaxValue);
             //@formatter:on
-
+            
             var magickColor = new MagickColor(r, g, b);
             colors.Add(magickColor);
         }
@@ -105,6 +119,20 @@ public sealed class SpfPalette
         {
             //the colors are encded in 16bits (rgba1555)
             var color = reader.ReadUInt16();
+            
+            //true black maps to transparent
+            if (color == 0)
+            {
+                colors.Add(
+                    new MagickColor(
+                        0,
+                        0,
+                        0,
+                        0));
+
+                continue;
+            }
+            
             //@formatter:off
             //TODO: do i bother reading the alpha? not sure what use it would be
              //shift and mask to get colors as bytes
@@ -125,12 +153,26 @@ public sealed class SpfPalette
     {
         foreach (var color in Colors565)
         {
+            //if color is transparent, write true black(transparent)
+            if (color.A == 0)
+            {
+                writer.WriteUInt16(0);
+
+                continue;
+            }
+
             //@formatter:off
             var r = MathEx.ScaleRange(color.R, 0, ushort.MaxValue, 0, 0b11111);
             var g = MathEx.ScaleRange(color.G, 0, ushort.MaxValue, 0, 0b111111);
             var b = MathEx.ScaleRange(color.B, 0, ushort.MaxValue, 0, 0b11111);
             //@formatter:on
+            
             var rgb565 = (ushort)((r << 11) | (g << 5) | b);
+            
+            //if we get true black from color loss, add 1 to each channel so it doesnt show up as transparent
+            if (rgb565 == 0)
+                rgb565 = 0b00001_000001_00001;
+            
             writer.WriteUInt16(rgb565);
         }
 

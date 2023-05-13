@@ -35,17 +35,16 @@ public sealed class SpfFrame
         };
         
         //get all pixels in the image
-        var pixels = image.GetPixels().ToList();
-        var frameData = new byte[pixels.Count];
-        var frameDataChannel = pixels.First().Channels - 1;
+        var frameData = new byte[header.ByteCount];
+        var pixels = image.GetPixels();
+        var indexChannel = pixels.GetIndex(PixelChannel.Index);
 
         //the palette indexes are stored in the alpha channel of each pixel for some reason
-        for (var i = 0; i < pixels.Count; i++)
+        for (var i = 0; i < header.ByteCount; i++)
         {
-            var pixel = pixels[i];
-            var index = pixel.GetChannel(frameDataChannel);
-
-            if (index > 256)
+            var index = pixels.GetPixel(i % header.PixelWidth, i / header.PixelWidth).GetChannel(indexChannel);
+            
+            if (index > 255)
                 throw new IndexOutOfRangeException("Pixel points to an color outside the bounds of the palette");
 
             frameData[i] = (byte)index;
@@ -92,18 +91,21 @@ public sealed class SpfFrame
         var pixels = image.GetPixelsUnsafe();
 
         //for each pixel
-        foreach (var set in pixels.Select((p, i) => new { Pixel = p, Index = i }))
+        foreach ((var pixel, var index) in pixels.Select((p, i) => (p, i)))
         {
-            var pixelIndex = set.Index;
-            
             //get the palette index from the frame data
-            var paletteIndex = Data[pixelIndex];
+            var paletteIndex = Data[index];
             
             //look up the color from the palette
             var color = palette.Colors565.ElementAt(paletteIndex);
+            var alpha = ushort.MaxValue;
 
+            //true black is transparent
+            if (color is { R: 0, G: 0, B: 0 })
+                alpha = 0;
+            
             //set the pixel color
-            set.Pixel.SetValues(new[] { color.R, color.G, color.B, ushort.MaxValue });
+            pixel.SetValues(new[] { color.R, color.G, color.B, alpha });
         }
 
         return image;
