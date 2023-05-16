@@ -91,8 +91,20 @@ public sealed class SpfFrame
         var pixels = image.GetPixelsUnsafe();
 
         //for each pixel
-        foreach ((var pixel, var index) in pixels.Select((p, i) => (p, i)))
+        foreach (var pixel in pixels)
         {
+            if ((pixel.X < Header.PadWidth) || (pixel.Y < Header.PadHeight))
+            {
+                pixel.SetValues(new ushort[] { 0, 0, 0, 0 });
+
+                continue;
+            }
+
+            var yVal = pixel.Y - Header.PadHeight;
+            var xVal = pixel.X - Header.PadWidth;
+
+            var index = (Header.PixelWidth - Header.PadWidth) * yVal + xVal;
+            
             //get the palette index from the frame data
             var paletteIndex = Data[index];
             
