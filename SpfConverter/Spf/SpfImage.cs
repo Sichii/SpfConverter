@@ -243,9 +243,13 @@ public sealed class SpfImage
             }
             default:
             {
-                //if the output path is not a directory, throw an exception
+                //if the output path is not a directory, create a directory where the output path is, then save within
                 if (!Directory.Exists(outputPath))
-                    throw new InvalidOperationException("Output path must be a directory when writing multiple frames");
+                {
+                    var path = outputPath.Split('.');
+                    Directory.CreateDirectory(path[0]);
+                    outputPath = path[0];
+                }
 
                 //convert this SPF image to a MagickImageCollection
                 using var collection = ConvertToMagickImageCollection();
