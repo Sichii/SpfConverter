@@ -39,9 +39,11 @@ public sealed class SpfFrame
         var pixels = image.GetPixels();
         var indexChannel = pixels.GetIndex(PixelChannel.Index);
 
-        //the palette indexes are stored in the alpha channel of each pixel for some reason
+        //for each pixel
         for (var i = 0; i < header.ByteCount; i++)
         {
+            //the index channel contains palette indices (each pixel byte refers to an index in the palette)
+            //get that index and store it as frame data
             var index = pixels.GetPixel(i % header.PixelWidth, i / header.PixelWidth).GetChannel(indexChannel);
             
             if (index > 255)
@@ -93,6 +95,9 @@ public sealed class SpfFrame
         //for each pixel
         foreach (var pixel in pixels)
         {
+            //padding is added to the left and top of the image
+            //i belive this was purely to save space in the file for images that had empty space on the top and left
+            //TODO: maybe padding is supposed to be left/bottom? image appears to be anchored to the bottom, not the top
             if ((pixel.X < Header.PadWidth) || (pixel.Y < Header.PadHeight))
             {
                 pixel.SetValues(new ushort[] { 0, 0, 0, 0 });
@@ -109,7 +114,7 @@ public sealed class SpfFrame
             var paletteIndex = Data[index];
             
             //look up the color from the palette
-            var color = palette.Colors565.ElementAt(paletteIndex);
+            var color = palette.Colors.ElementAt(paletteIndex);
             var alpha = ushort.MaxValue;
 
             //true black is transparent

@@ -44,13 +44,13 @@ public sealed class SpfImage
         {
             Unknown2 = 1
         };
-
         
+        //get the transparency map for each image
         var alphaMaps = collection
                         .Select(GetTransparencyMap)
                         .ToList();
         
-        //reduce colors to 256, no dithering
+        //reduce colors to 255 using specified dithering
         collection.Quantize(
             new QuantizeSettings
             {
@@ -59,6 +59,7 @@ public sealed class SpfImage
                 DitherMethod = ditherMethod,
             });
 
+        //reapply transparency maps
         foreach ((var image, var alphaMap) in collection.Zip(alphaMaps))
             ApplyTransparencyMap(image, alphaMap);
 
@@ -66,18 +67,15 @@ public sealed class SpfImage
         using var mosaic = collection.Mosaic();
         
         //get colors of the mosaic
-        var palette = GetPalette(mosaic);
+        var colors = GetPalette(mosaic);
 
-        //map each image to the palette
+        //convert each image to an SpfFrame
+        //do not use image.Map(), it seems to mess up the colors
         foreach (var image in collection)
-        {
-            //i guess this messes stuff up for some reason
-            //image.Map(palette!);
             frames.Add(SpfFrame.FromMagickImage((MagickImage)image));
-        }
 
         //create palette from colors
-        var spfPalette = new SpfPalette(palette!);
+        var spfPalette = new SpfPalette(colors!);
 
         return new SpfImage(header, spfPalette, frames);
     }
@@ -163,7 +161,7 @@ public sealed class SpfImage
         //for each point in the transparency map
         foreach (var point in transparencyMap)
         {
-            //grab that pixel and set it's index to the trasparent color
+            //grab that pixel and set it's index to the trasparent color in the palette
             var pixel = pixels.GetPixel(point.X, point.Y);
             pixel.SetChannel(indexChannel, transparentIndex);
         }
