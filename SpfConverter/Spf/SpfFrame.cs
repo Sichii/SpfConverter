@@ -39,9 +39,11 @@ public sealed class SpfFrame
         var pixels = image.GetPixels();
         var indexChannel = pixels.GetIndex(PixelChannel.Index);
 
-        //the palette indexes are stored in the alpha channel of each pixel for some reason
+        //for each pixel
         for (var i = 0; i < header.ByteCount; i++)
         {
+            //the index channel contains palette indices (each pixel byte refers to an index in the palette)
+            //get that index and store it as frame data
             var index = pixels.GetPixel(i % header.PixelWidth, i / header.PixelWidth).GetChannel(indexChannel);
             
             if (index > 255)
@@ -83,52 +85,46 @@ public sealed class SpfFrame
     /// </summary>
     public MagickImage ToImage(SpfPalette palette)
     {
-        try
+        //create a transparent image with the same dimensions as the frame
+        var image = new MagickImage(MagickColors.Transparent, Header.PixelWidth, Header.PixelHeight);
+        image.ColorSpace = ColorSpace.sRGB;
+
+        //grab a reference to the image pixels
+        var pixels = image.GetPixelsUnsafe();
+
+        //for each pixel
+        foreach (var pixel in pixels)
         {
-            //create a transparent image with the same dimensions as the frame
-            var image = new MagickImage(MagickColors.Transparent, Header.PixelWidth, Header.PixelHeight);
-            image.ColorSpace = ColorSpace.sRGB;
-
-            //grab a reference to the image pixels
-            var pixels = image.GetPixelsUnsafe();
-
-            //for each pixel
-            foreach (var pixel in pixels)
+            //padding is added to the left and top of the image
+            //i belive this was purely to save space in the file for images that had empty space on the top and left
+            //TODO: maybe padding is supposed to be left/bottom? image appears to be anchored to the bottom, not the top
+            if ((pixel.X < Header.PadWidth) || (pixel.Y < Header.PadHeight))
             {
-                if ((pixel.X < Header.PadWidth) || (pixel.Y < Header.PadHeight))
-                {
-                    pixel.SetValues(new ushort[] { 0, 0, 0, 0 });
+                pixel.SetValues(new ushort[] { 0, 0, 0, 0 });
 
-                    continue;
-                }
-
-                var yVal = pixel.Y - Header.PadHeight;
-                var xVal = pixel.X - Header.PadWidth;
-
-                var index = (Header.PixelWidth - Header.PadWidth) * yVal + xVal;
-
-                //get the palette index from the frame data
-                var paletteIndex = Data[index];
-
-                //look up the color from the palette
-                var color = palette.Colors565.ElementAt(paletteIndex);
-                var alpha = ushort.MaxValue;
-
-                //true black is transparent
-                if (color is { R: 0, G: 0, B: 0 })
-                    alpha = 0;
-
-                //set the pixel color
-                pixel.SetValues(new[] { color.R, color.G, color.B, alpha });
+                continue;
             }
 
-            return image;
-        }
-        catch
-        {
-            // Ignored
+            var yVal = pixel.Y - Header.PadHeight;
+            var xVal = pixel.X - Header.PadWidth;
+
+            var index = (Header.PixelWidth - Header.PadWidth) * yVal + xVal;
+            
+            //get the palette index from the frame data
+            var paletteIndex = Data[index];
+            
+            //look up the color from the palette
+            var color = palette.Colors.ElementAt(paletteIndex);
+            var alpha = ushort.MaxValue;
+
+            //true black is transparent
+            if (color is { R: 0, G: 0, B: 0 })
+                alpha = 0;
+            
+            //set the pixel color
+            pixel.SetValues(new[] { color.R, color.G, color.B, alpha });
         }
 
-        return default;
+        return image;
     }
 }

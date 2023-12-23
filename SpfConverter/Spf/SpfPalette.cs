@@ -12,37 +12,27 @@ public sealed class SpfPalette
     /// <summary>
     /// The first set of colors in the palette, which are in RGB565 format
     /// </summary>
-    public ICollection<IMagickColor<ushort>> Colors565 { get; init; }
-    /// <summary>
-    /// The second set of colors in the palette, which are in RGB1555 format
-    /// </summary>
-    public ICollection<IMagickColor<ushort>> Colors1555 { get; init; }
+    public ICollection<IMagickColor<ushort>> Colors { get; init; }
+
     /// <summary>
     /// The amount of padding in the palette (unused colors)
     /// </summary>
     public int Padding { get; init; }
-    private const ushort FIVE_BIT_MASK = 0b11111;
-    private const ushort SIX_BIT_MASK = 0b111111;
+    private const byte FIVE_BIT_MASK = 0b11111;
+    private const byte SIX_BIT_MASK = 0b111111;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SpfPalette"/> class
     /// </summary>
-    /// <param name="colors565">Up to 256 colors</param>
+    /// <param name="colors">Up to 256 colors</param>
     /// <exception cref="ArgumentException">Palette can only contain 256 colors</exception>
-    public SpfPalette(ICollection<IMagickColor<ushort>> colors565)
+    public SpfPalette(ICollection<IMagickColor<ushort>> colors)
     {
-        if (colors565.Count > 256)
+        if (colors.Count > 256)
             throw new ArgumentException("Palette can only contain 256 colors");
         
-        Colors565 = colors565;
-        Padding = 256 - colors565.Count;
-
-        //@formatter:off
-        Colors1555 = Enumerable.Range(0, Colors565.Count)
-                               .Select(_ => new MagickColor(0, 0, 0, 0))
-                               .OfType<IMagickColor<ushort>>()
-                               .ToList();
-        //@formatter:on
+        Colors = colors;
+        Padding = 256 - colors.Count;
     }
     
     /// <summary>
@@ -63,13 +53,10 @@ public sealed class SpfPalette
     {
         //read the 565 bytes first
         var rgb565 = Read565(ref reader);
-        //then the 1555 bytes
-        var rgb1555 = Read1555(ref reader);
+        //then the 1555 bytes, however... these don't appear to be used by anything
+        _ = Read1555(ref reader);
 
-        return new SpfPalette(rgb565)
-        {
-            Colors1555 = rgb1555
-        };
+        return new SpfPalette(rgb565);
     }
 
     private static ICollection<IMagickColor<ushort>> Read565(ref SpanReader reader)
@@ -151,7 +138,7 @@ public sealed class SpfPalette
     
     private void Write565(ref SpanWriter writer)
     {
-        foreach (var color in Colors565)
+        foreach (var color in Colors)
         {
             //if color is transparent, write true black(transparent)
             if (color.A == 0)
@@ -162,9 +149,9 @@ public sealed class SpfPalette
             }
 
             //@formatter:off
-            var r = MathEx.ScaleRange(color.R, 0, ushort.MaxValue, 0, 0b11111);
-            var g = MathEx.ScaleRange(color.G, 0, ushort.MaxValue, 0, 0b111111);
-            var b = MathEx.ScaleRange(color.B, 0, ushort.MaxValue, 0, 0b11111);
+            var r = MathEx.ScaleRange(color.R, 0, ushort.MaxValue, 0, FIVE_BIT_MASK);
+            var g = MathEx.ScaleRange(color.G, 0, ushort.MaxValue, 0, SIX_BIT_MASK);
+            var b = MathEx.ScaleRange(color.B, 0, ushort.MaxValue, 0, FIVE_BIT_MASK);
             //@formatter:on
             
             var rgb565 = (ushort)((r << 11) | (g << 5) | b);
@@ -182,19 +169,15 @@ public sealed class SpfPalette
     
     private void Write1555(ref SpanWriter writer)
     {
-        foreach (var color in Colors565)
+        foreach (var color in Colors)
         {
             //@formatter:off
-            var r = MathEx.ScaleRange<ushort, byte>(color.R, 0, ushort.MaxValue, 0, 0b11111);
-            var g = MathEx.ScaleRange<ushort, byte>(color.G, 0, ushort.MaxValue, 0, 0b11111);
-            var b = MathEx.ScaleRange<ushort, byte>(color.B, 0, ushort.MaxValue, 0, 0b11111);
+            var r = MathEx.ScaleRange<ushort, byte>(color.R, 0, ushort.MaxValue, 0, FIVE_BIT_MASK);
+            var g = MathEx.ScaleRange<ushort, byte>(color.G, 0, ushort.MaxValue, 0, FIVE_BIT_MASK);
+            var b = MathEx.ScaleRange<ushort, byte>(color.B, 0, ushort.MaxValue, 0, FIVE_BIT_MASK);
             //@formatter:on
             
             var rgb1555 = (ushort) ((r << 10) | (g << 5) | b);
-            
-            //if there is alpha, set alpha bit i guess?
-            //if(color.A < ushort.MaxValue)
-            //  rgb1555 |= 0x8000;
             
             writer.WriteUInt16(rgb1555);
         }
