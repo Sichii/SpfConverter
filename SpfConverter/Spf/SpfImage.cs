@@ -279,9 +279,15 @@ public sealed class SpfImage
 
         foreach (var frame in Frames)
         {
-            var image = frame.ToImage(Palette);
-            
-            collection.Add(image);
+            try
+            {
+                var image = frame.ToImage(Palette);
+                collection.Add(image);
+            }
+            catch
+            {
+                // Ignored
+            }
         }
 
         return collection;

@@ -83,43 +83,52 @@ public sealed class SpfFrame
     /// </summary>
     public MagickImage ToImage(SpfPalette palette)
     {
-        //create a transparent image with the same dimensions as the frame
-        var image = new MagickImage(MagickColors.Transparent, Header.PixelWidth, Header.PixelHeight);
-        image.ColorSpace = ColorSpace.sRGB;
-
-        //grab a reference to the image pixels
-        var pixels = image.GetPixelsUnsafe();
-
-        //for each pixel
-        foreach (var pixel in pixels)
+        try
         {
-            if ((pixel.X < Header.PadWidth) || (pixel.Y < Header.PadHeight))
-            {
-                pixel.SetValues(new ushort[] { 0, 0, 0, 0 });
+            //create a transparent image with the same dimensions as the frame
+            var image = new MagickImage(MagickColors.Transparent, Header.PixelWidth, Header.PixelHeight);
+            image.ColorSpace = ColorSpace.sRGB;
 
-                continue;
+            //grab a reference to the image pixels
+            var pixels = image.GetPixelsUnsafe();
+
+            //for each pixel
+            foreach (var pixel in pixels)
+            {
+                if ((pixel.X < Header.PadWidth) || (pixel.Y < Header.PadHeight))
+                {
+                    pixel.SetValues(new ushort[] { 0, 0, 0, 0 });
+
+                    continue;
+                }
+
+                var yVal = pixel.Y - Header.PadHeight;
+                var xVal = pixel.X - Header.PadWidth;
+
+                var index = (Header.PixelWidth - Header.PadWidth) * yVal + xVal;
+
+                //get the palette index from the frame data
+                var paletteIndex = Data[index];
+
+                //look up the color from the palette
+                var color = palette.Colors565.ElementAt(paletteIndex);
+                var alpha = ushort.MaxValue;
+
+                //true black is transparent
+                if (color is { R: 0, G: 0, B: 0 })
+                    alpha = 0;
+
+                //set the pixel color
+                pixel.SetValues(new[] { color.R, color.G, color.B, alpha });
             }
 
-            var yVal = pixel.Y - Header.PadHeight;
-            var xVal = pixel.X - Header.PadWidth;
-
-            var index = (Header.PixelWidth - Header.PadWidth) * yVal + xVal;
-            
-            //get the palette index from the frame data
-            var paletteIndex = Data[index];
-            
-            //look up the color from the palette
-            var color = palette.Colors565.ElementAt(paletteIndex);
-            var alpha = ushort.MaxValue;
-
-            //true black is transparent
-            if (color is { R: 0, G: 0, B: 0 })
-                alpha = 0;
-            
-            //set the pixel color
-            pixel.SetValues(new[] { color.R, color.G, color.B, alpha });
+            return image;
+        }
+        catch
+        {
+            // Ignored
         }
 
-        return image;
+        return default;
     }
 }
